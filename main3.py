@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from scipy.stats import norm
 from fpdf import FPDF
 import tempfile
+import kaleido
 
 # -----------------------------------------------------------------------------
 # 1. CONFIGURAZIONE PAGINA E STILE
@@ -26,7 +27,7 @@ with st.sidebar:
     D = st.number_input("Domanda Annua (Unità)", min_value=100, value=2400, step=100, help="D: Domanda totale prevista per l'anno")
     S = st.number_input("Costo Setup/Ordine (€)", min_value=5.0, value=50.0, step=5.0, help="S: Costo fisso per emettere un ordine")
     H = st.number_input("Costo Mantenimento (€/unità/anno)", min_value=0.10, value=2.0, step=0.1, help="H: Costo per tenere un'unità a magazzino per un anno")
-    C = st.number_input("Costo Unitario Articolo (€)", value=10.0, step=1.0)
+    C = st.number_input("Costo Unitario Articolo (€)", min_value=1.0, value=10.0, step=1.0)
     
     st.header("2. Parametri Logistici & Variabilità")
     L = st.number_input("Lead Time Medio (Giorni)", min_value=1, value=10, step=1, help="L: Tempo medio tra ordine e consegna")
@@ -86,7 +87,7 @@ kpi = calcola_kpi(D, S, H, L, L_std, D_std, livello_servizio)
 @st.cache_data
 def esegui_simulazione_avanzata(eoq, rop, ss, d_avg, D_std, L, L_std, anni=3):
     giorni = 365 * anni
-    inventario = [eoq + ss] # 
+    inventario = [eoq + ss]  
     ordini = []  #  Inizializzazione lista vuota
     
     # Generazione Domanda Sintetica con Variabilità
@@ -154,7 +155,6 @@ df_sim = esegui_simulazione_avanzata(kpi['EOQ'], kpi['ROP'], kpi['SS'], kpi['D_a
 # Riga KPI
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Lotto Economico (EOQ)", f"{int(kpi['EOQ'])} unità", help="Quantità ottimale per ordine")
-# FIXED: Accessed specific keys (kpi['ROP'], etc) instead of the whole dict
 c2.metric("Punto di Riordino (ROP)", f"{int(kpi['ROP'])} unità", help="Livello scorta che fa scattare l'ordine")
 c3.metric("Scorta Sicurezza", f"{int(kpi['SS'])} unità", help="Buffer contro la variabilità")
 c4.metric("Costo Totale Annuo Est.", f"€ {kpi['Costo_Totale']:,.2f}", help="Escluso costo acquisto merce")
@@ -238,11 +238,10 @@ def crea_report_pdf(kpi, df, fig):
     # Inserimento Immagine Grafico
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
-            # Nota: Kaleido è richiesto per l'esportazione delle imagini statiche ma non è stato implementato
             fig.write_image(tmp.name, width=800, height=400)
             pdf.image(tmp.name, x=10, y=100, w=190)
     except Exception as e:
-        pdf.cell(0, 10, "Impossibile generare immagine grafico (Richiede 'kaleido')", 0, 1)
+        pdf.cell(0, 10, "Errore nella generazione dell'immagine", 0, 1)
 
     return pdf.output(dest='S').encode('latin-1')
 
