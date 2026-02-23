@@ -5,4 +5,3 @@ plotly
 scipy 
 fpdf 
 kaleido
-tempfile
